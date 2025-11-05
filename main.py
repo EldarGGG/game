@@ -651,8 +651,29 @@ class Game:
 
                 if self.state == GameState.PLAYING:
                     if event.key == pygame.K_e:
-                        collected = self.player.collect_trash(self.trash_group)
+                        result = self.player.collect_trash(self.trash_group)
+                        collected = result["count"]
                         if collected > 0:
+                            # Применяем урон от опасного мусора
+                            if result["damage"] > 0:
+                                self.health -= result["damage"]
+                                # Красные частицы для урона
+                                for _ in range(10):
+                                    particle = Particle(self.player.rect.centerx,
+                                                      self.player.rect.centery, RED)
+                                    self.particles_group.add(particle)
+                                    self.all_sprites.add(particle)
+
+                            # Добавляем бонусные очки сразу
+                            if result["bonus_points"] > 0:
+                                self.score += int(result["bonus_points"] * self.combo_multiplier)
+                                # Золотые частицы для бонусов
+                                for _ in range(8):
+                                    particle = Particle(self.player.rect.centerx,
+                                                      self.player.rect.centery, (255, 215, 0))
+                                    self.particles_group.add(particle)
+                                    self.all_sprites.add(particle)
+
                             # Обновление комбо
                             self.combo_count += collected
                             self.combo_timer = self.combo_max_time
@@ -763,23 +784,36 @@ class Game:
         # Обновление мусорщиков и выброс мусора
         for litterer in self.litterers_group:
             if litterer.should_drop_litter():
+                # Определяем редкость мусора
+                rand = random.random()
+                if rand < 0.05:  # 5% шанс золотого
+                    rarity = "golden"
+                    particle_color = (255, 215, 0)
+                elif rand < 0.15:  # 10% шанс опасного
+                    rarity = "dangerous"
+                    particle_color = (255, 0, 0)
+                else:  # 85% обычный
+                    rarity = "normal"
+                    particle_color = (100, 70, 30)
+
                 # Создаем новый мусор на месте мусорщика
                 trash_type = random.choice(["plastic", "paper", "bottle", "can"])
                 new_trash = Trash(
                     litterer.rect.centerx,
                     litterer.rect.centery,
                     trash_type,
-                    self.current_level
+                    self.current_level,
+                    rarity=rarity
                 )
                 self.trash_group.add(new_trash)
                 self.all_sprites.add(new_trash)
 
                 # Небольшая визуальная обратная связь
-                for _ in range(3):
+                for _ in range(5 if rarity != "normal" else 3):
                     particle = Particle(
                         litterer.rect.centerx,
                         litterer.rect.centery,
-                        (100, 70, 30)  # Коричневый цвет мусора
+                        particle_color
                     )
                     self.particles_group.add(particle)
                     self.all_sprites.add(particle)
@@ -2178,7 +2212,7 @@ class Player(pygame.sprite.Sprite):
     def collect_trash(self, trash_group):
         """Собрать мусор"""
         if self.carrying_trash >= self.max_trash:
-            return 0  # Возвращаем 0 если сумка полная
+            return {"count": 0, "damage": 0, "bonus_points": 0}  # Возвращаем пустой результат
 
         # Радиус сбора зависит от наличия трактора
         radius = 50 if self.has_tractor else 25
@@ -2189,24 +2223,46 @@ class Player(pygame.sprite.Sprite):
         collect_count = 3 if self.has_tractor else 1
 
         collected = 0
+        total_damage = 0
+        total_bonus_points = 0
+
         for trash in hits:
             if not trash.needs_drone and collected < collect_count:
+                # Проверяем редкость мусора
+                if hasattr(trash, 'damage'):
+                    total_damage += trash.damage
+                if hasattr(trash, 'points'):
+                    total_bonus_points += trash.points
+
                 trash.kill()
                 self.carrying_trash = min(self.carrying_trash + 1, self.max_trash)
                 collected += 1
 
-        return collected  # Возвращаем количество собранного
+        return {"count": collected, "damage": total_damage, "bonus_points": total_bonus_points}
 
 
 class Trash(pygame.sprite.Sprite):
     """Мусор с улучшенной графикой"""
-    def __init__(self, x, y, trash_type, level, needs_drone=False, river_trash=False):
+    def __init__(self, x, y, trash_type, level, needs_drone=False, river_trash=False, rarity="normal"):
         super().__init__()
         self.trash_type = trash_type
         self.level = level
         self.needs_drone = needs_drone
         self.river_trash = river_trash  # Мусор блокирует ручей
+        self.rarity = rarity  # "normal", "golden", "dangerous"
         self.size = 28
+
+        # Бонусы и характеристики в зависимости от редкости
+        if self.rarity == "golden":
+            self.points = 30  # Золотой дает больше очков
+            self.glow_color = (255, 215, 0)  # Золотое свечение
+        elif self.rarity == "dangerous":
+            self.points = 20  # Опасный дает средне очков
+            self.damage = 5  # Отнимает 5 HP при сборе
+            self.glow_color = (255, 0, 0)  # Красное свечение
+        else:  # normal
+            self.points = 10  # Обычный мусор
+            self.glow_color = None
 
         self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
         self.rect = self.image.get_rect()
@@ -2334,6 +2390,17 @@ class Trash(pygame.sprite.Sprite):
                 c = (100 + i * 15, 100 + i * 15, 100 + i * 15)
                 pygame.draw.line(self.image, c, (9, 10 + i * 3), (21, 10 + i * 3))
 
+        # Свечение для редкого мусора
+        if self.glow_color:
+            pulse_size = int(abs(math.sin(self.pulse)) * 4)
+            for i in range(3):
+                alpha = 60 - i * 15
+                radius = self.size // 2 + pulse_size + i * 2
+                glow_surf = pygame.Surface((self.size + i * 6, self.size + i * 6), pygame.SRCALPHA)
+                pygame.draw.circle(glow_surf, (*self.glow_color, alpha),
+                                 (self.size // 2 + i * 3, self.size // 2 + i * 3), radius)
+                self.image.blit(glow_surf, (-i * 3, -i * 3))
+
         # Индикатор для мусора требующего дрон
         if self.needs_drone:
             pygame.draw.rect(self.image, RED, (0, 0, self.size, self.size), 3, 3)
@@ -2348,6 +2415,9 @@ class Trash(pygame.sprite.Sprite):
 
     def update(self):
         self.pulse += 0.1
+        # Перерисовываем если есть свечение (для анимации)
+        if self.glow_color:
+            self.draw_trash()
 
 
 class Obstacle(pygame.sprite.Sprite):
