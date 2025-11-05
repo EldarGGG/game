@@ -159,6 +159,20 @@ class Game:
         # Деревенские дома
         self.houses = pygame.sprite.Group()
 
+        # Таймер и звезды
+        self.level_time_limit = 180  # 3 минуты = 180 секунд
+        self.level_timer = self.level_time_limit
+        self.level_stars = 0  # 0-3 звезды
+        self.level_best_times = {1: None, 2: None, 3: None}  # Лучшее время для каждого уровня
+        self.level_best_stars = {1: 0, 2: 0, 3: 0}  # Лучшие звезды для каждого уровня
+
+        # Комбо-система
+        self.combo_count = 0  # Текущее комбо
+        self.combo_timer = 0  # Таймер комбо (в кадрах)
+        self.combo_max_time = 180  # 3 секунды (180 кадров при 60 FPS)
+        self.combo_multiplier = 1.0  # Множитель очков
+        self.max_combo = 0  # Лучшее комбо за сессию
+
     def new_game(self):
         """Начать новую игру"""
         self.score = 0
@@ -196,6 +210,10 @@ class Game:
         self.cutscene_active = False
         self.cutscene_timer = 0
         self.cutscene_type = None
+
+        # Сброс таймера для нового уровня
+        self.level_timer = self.level_time_limit
+        self.level_stars = 0
 
         # Создание земли
         self.create_ground(level_num)
@@ -596,7 +614,19 @@ class Game:
 
                 if self.state == GameState.PLAYING:
                     if event.key == pygame.K_e:
-                        self.player.collect_trash(self.trash_group)
+                        collected = self.player.collect_trash(self.trash_group)
+                        if collected > 0:
+                            # Обновление комбо
+                            self.combo_count += collected
+                            self.combo_timer = self.combo_max_time
+
+                            # Рассчитываем множитель (x1, x2, x3, x4...)
+                            self.combo_multiplier = 1 + (self.combo_count // 3) * 0.5
+                            self.combo_multiplier = min(self.combo_multiplier, 5.0)  # Макс x5
+
+                            # Обновляем макс комбо
+                            if self.combo_count > self.max_combo:
+                                self.max_combo = self.combo_count
                     # Исправлен конфликт: T для переключения дрона вместо D
                     if event.key == pygame.K_t and self.drone:
                         if hasattr(self.drone, 'toggle'):
@@ -776,10 +806,15 @@ class Game:
                     delivered_river_trash = True
                     break
 
-            self.score += self.player.carrying_trash * 10
+            # Очки с учетом комбо-множителя
+            base_points = self.player.carrying_trash * 10
+            total_points = int(base_points * self.combo_multiplier)
+            self.score += total_points
             self.player.carrying_trash = 0
 
-            for _ in range(15):
+            # Больше частиц при высоком комбо
+            particle_count = 15 + int(self.combo_multiplier * 5)
+            for _ in range(particle_count):
                 particle = Particle(self.recycling_station.rect.centerx,
                                   self.recycling_station.rect.centery,
                                   random.choice([GREEN, YELLOW, BLUE]))
@@ -873,8 +908,40 @@ class Game:
                 self.celebrating_villagers.empty()
                 self.state = GameState.PLAYING
 
+        # Обновление таймера уровня
+        if self.state == GameState.PLAYING:
+            self.level_timer -= 1 / FPS  # Уменьшаем на 1/60 секунды каждый кадр
+            if self.level_timer <= 0:
+                self.level_timer = 0
+                self.state = GameState.GAME_OVER  # Время вышло = проигрыш
+
+        # Обновление комбо-таймера
+        if self.combo_timer > 0:
+            self.combo_timer -= 1
+            if self.combo_timer <= 0:
+                # Сброс комбо
+                self.combo_count = 0
+                self.combo_multiplier = 1.0
+
         # Условия победы/поражения
         if len(self.trash_group) == 0:
+            # Рассчитываем звезды на основе оставшегося времени
+            time_spent = self.level_time_limit - self.level_timer
+            if time_spent <= 90:  # Менее 1:30
+                self.level_stars = 3
+            elif time_spent <= 120:  # Менее 2:00
+                self.level_stars = 2
+            elif time_spent <= 150:  # Менее 2:30
+                self.level_stars = 1
+            else:
+                self.level_stars = 1  # Минимум 1 звезда за прохождение
+
+            # Сохраняем лучшие результаты
+            if self.level_best_times[self.current_level] is None or time_spent < self.level_best_times[self.current_level]:
+                self.level_best_times[self.current_level] = time_spent
+            if self.level_stars > self.level_best_stars[self.current_level]:
+                self.level_best_stars[self.current_level] = self.level_stars
+
             self.state = GameState.LEVEL_COMPLETE
 
         if self.health <= 0:
@@ -1108,6 +1175,30 @@ class Game:
             pygame.draw.rect(hud_panel, color, (0, y, SCREEN_WIDTH, 1))
         self.screen.blit(hud_panel, (0, 0))
 
+        # ТАЙМЕР (большой, в центре вверху)
+        minutes = int(self.level_timer // 60)
+        seconds = int(self.level_timer % 60)
+        timer_text = f"{minutes}:{seconds:02d}"
+
+        # Цвет таймера зависит от оставшегося времени
+        if self.level_timer > 60:
+            timer_color = GREEN
+        elif self.level_timer > 30:
+            timer_color = YELLOW
+        else:
+            timer_color = RED
+
+        # Панель таймера
+        timer_panel = pygame.Surface((200, 60), pygame.SRCALPHA)
+        timer_panel.fill((0, 0, 0, 180))
+        pygame.draw.rect(timer_panel, timer_color, (0, 0, 200, 60), 3, 10)
+        self.screen.blit(timer_panel, (SCREEN_WIDTH // 2 - 100, 15))
+
+        # Текст таймера
+        timer_surf = self.font_large.render(timer_text, True, timer_color)
+        timer_rect = timer_surf.get_rect(center=(SCREEN_WIDTH // 2, 45))
+        self.screen.blit(timer_surf, timer_rect)
+
         # Очки с иконкой
         pygame.draw.circle(self.screen, YELLOW, (35, 25), 15)
         score_text = self.font_small.render(f"{self.score}", True, WHITE)
@@ -1209,6 +1300,60 @@ class Game:
 
                 river_text = self.font_small.render("Ручей течет!", True, WHITE)
                 self.screen.blit(river_text, (30, SCREEN_HEIGHT - 48))
+
+        # КОМБО (большое отображение в центре если активно)
+        if self.combo_count > 0:
+            # Центральное большое отображение
+            combo_y = SCREEN_HEIGHT // 2 - 150
+
+            # Пульсирующий эффект
+            pulse = abs(math.sin(pygame.time.get_ticks() / 100)) * 10
+
+            # Цвет зависит от множителя
+            if self.combo_multiplier >= 4:
+                combo_color = (255, 100, 255)  # Фиолетовый
+            elif self.combo_multiplier >= 3:
+                combo_color = (255, 50, 50)  # Красный
+            elif self.combo_multiplier >= 2:
+                combo_color = ORANGE  # Оранжевый
+            else:
+                combo_color = YELLOW  # Желтый
+
+            # Панель комбо
+            combo_width = 300 + int(pulse)
+            combo_height = 100
+            combo_panel = pygame.Surface((combo_width, combo_height), pygame.SRCALPHA)
+            combo_panel.fill((0, 0, 0, 150))
+            pygame.draw.rect(combo_panel, combo_color, (0, 0, combo_width, combo_height), 4, 15)
+            self.screen.blit(combo_panel, (SCREEN_WIDTH // 2 - combo_width // 2, combo_y))
+
+            # Текст COMBO
+            combo_label = self.font_large.render("COMBO", True, combo_color)
+            combo_label_rect = combo_label.get_rect(center=(SCREEN_WIDTH // 2, combo_y + 30))
+            self.screen.blit(combo_label, combo_label_rect)
+
+            # Множитель
+            multiplier_text = f"x{self.combo_multiplier:.1f}"
+            multiplier_surf = self.font_large.render(multiplier_text, True, WHITE)
+            multiplier_rect = multiplier_surf.get_rect(center=(SCREEN_WIDTH // 2, combo_y + 65))
+            self.screen.blit(multiplier_surf, multiplier_rect)
+
+            # Прогресс-бар комбо-таймера (внизу панели)
+            bar_width = combo_width - 20
+            bar_height = 8
+            bar_x = SCREEN_WIDTH // 2 - bar_width // 2
+            bar_y = combo_y + combo_height - 15
+
+            # Фон бара
+            pygame.draw.rect(self.screen, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height), 0, 4)
+
+            # Заполненная часть
+            fill_width = int((self.combo_timer / self.combo_max_time) * bar_width)
+            if fill_width > 0:
+                pygame.draw.rect(self.screen, combo_color, (bar_x, bar_y, fill_width, bar_height), 0, 4)
+
+            # Обводка
+            pygame.draw.rect(self.screen, WHITE, (bar_x, bar_y, bar_width, bar_height), 2, 4)
 
         # Активные квесты
         if self.active_quests:
@@ -1319,12 +1464,42 @@ class Game:
         self.screen.blit(shadow, shadow_rect)
         self.screen.blit(complete_text, complete_rect)
 
+        # Звезды!
+        star_y = SCREEN_HEIGHT // 2
+        star_spacing = 80
+        star_start_x = SCREEN_WIDTH // 2 - (self.level_stars * star_spacing) // 2
+
+        for i in range(3):
+            star_x = star_start_x + i * star_spacing
+            star_color = YELLOW if i < self.level_stars else GRAY
+
+            # Рисуем звезду (5 лучей)
+            star_size = 35
+            points = []
+            for j in range(10):
+                angle = math.pi / 2 + j * math.pi / 5
+                radius = star_size if j % 2 == 0 else star_size // 2
+                px = star_x + int(math.cos(angle) * radius)
+                py = star_y + int(math.sin(angle) * radius)
+                points.append((px, py))
+
+            pygame.draw.polygon(self.screen, star_color, points)
+            pygame.draw.polygon(self.screen, WHITE, points, 2)
+
+        # Время
+        time_spent = self.level_time_limit - self.level_timer
+        time_minutes = int(time_spent // 60)
+        time_seconds = int(time_spent % 60)
+        time_text = self.font_medium.render(f"Время: {time_minutes}:{time_seconds:02d}", True, WHITE)
+        time_rect = time_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 60))
+        self.screen.blit(time_text, time_rect)
+
         score_text = self.font_medium.render(f"Очки: {self.score}", True, YELLOW)
-        score_rect = score_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20))
+        score_rect = score_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100))
         self.screen.blit(score_text, score_rect)
 
         continue_text = self.font_small.render("Нажмите ENTER", True, WHITE)
-        continue_rect = continue_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 80))
+        continue_rect = continue_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 150))
         self.screen.blit(continue_text, continue_rect)
 
     def draw_game_over(self):
@@ -1905,7 +2080,7 @@ class Player(pygame.sprite.Sprite):
     def collect_trash(self, trash_group):
         """Собрать мусор"""
         if self.carrying_trash >= self.max_trash:
-            return
+            return 0  # Возвращаем 0 если сумка полная
 
         # Радиус сбора зависит от наличия трактора
         radius = 50 if self.has_tractor else 25
@@ -1921,6 +2096,8 @@ class Player(pygame.sprite.Sprite):
                 trash.kill()
                 self.carrying_trash = min(self.carrying_trash + 1, self.max_trash)
                 collected += 1
+
+        return collected  # Возвращаем количество собранного
 
 
 class Trash(pygame.sprite.Sprite):
