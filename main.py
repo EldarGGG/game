@@ -700,6 +700,21 @@ class Game:
                                 elif self.combo_multiplier >= 2:
                                     self.flash_color = ORANGE
                                 self.flash_alpha = 50
+                    # Рывок (Dash) на пробел или Shift
+                    if event.key == pygame.K_SPACE or event.key == pygame.K_LSHIFT:
+                        if self.player.perform_dash():
+                            # Визуальные эффекты для dash
+                            for _ in range(8):
+                                particle = Particle(
+                                    self.player.rect.centerx,
+                                    self.player.rect.centery,
+                                    (150, 200, 255)  # Голубые частицы
+                                )
+                                self.particles_group.add(particle)
+                                self.all_sprites.add(particle)
+                            # Небольшая тряска при dash
+                            self.screen_shake = 3
+
                     # Исправлен конфликт: T для переключения дрона вместо D
                     if event.key == pygame.K_t and self.drone:
                         if hasattr(self.drone, 'toggle'):
@@ -1401,6 +1416,48 @@ class Game:
             drone_text = self.font_small.render(drone_status, True, WHITE)
             self.screen.blit(drone_text, (360, 15))
 
+        # Индикатор Dash (слева внизу)
+        dash_panel_w = 150
+        dash_panel_h = 50
+        dash_x = 20
+        dash_y = SCREEN_HEIGHT - 130
+
+        # Фон панели
+        dash_panel = pygame.Surface((dash_panel_w, dash_panel_h), pygame.SRCALPHA)
+        dash_panel.fill((50, 50, 50, 180))
+        pygame.draw.rect(dash_panel, (150, 200, 255), (0, 0, dash_panel_w, dash_panel_h), 2, 5)
+        self.screen.blit(dash_panel, (dash_x, dash_y))
+
+        # Текст DASH
+        dash_label = self.font_tiny.render("РЫВОК [SPACE]", True, (150, 200, 255))
+        self.screen.blit(dash_label, (dash_x + 10, dash_y + 5))
+
+        # Прогресс-бар cooldown
+        bar_width = dash_panel_w - 20
+        bar_height = 10
+        bar_x = dash_x + 10
+        bar_y = dash_y + 30
+
+        # Фон бара
+        pygame.draw.rect(self.screen, (30, 30, 30), (bar_x, bar_y, bar_width, bar_height), 0, 3)
+
+        # Заполнение бара
+        if self.player.dash_cooldown > 0:
+            # Перезарядка
+            progress = 1 - (self.player.dash_cooldown / self.player.dash_cooldown_max)
+            fill_width = int(bar_width * progress)
+            bar_color = (100, 100, 100) if fill_width < bar_width else (150, 200, 255)
+            pygame.draw.rect(self.screen, bar_color, (bar_x, bar_y, fill_width, bar_height), 0, 3)
+
+            # Текст cooldown
+            cd_text = self.font_tiny.render(f"{self.player.dash_cooldown // 60 + 1}с", True, WHITE)
+            self.screen.blit(cd_text, (bar_x + bar_width // 2 - 10, bar_y - 15))
+        else:
+            # Готов к использованию
+            pygame.draw.rect(self.screen, (150, 255, 150), (bar_x, bar_y, bar_width, bar_height), 0, 3)
+            ready_text = self.font_tiny.render("ГОТОВ!", True, (150, 255, 150))
+            self.screen.blit(ready_text, (bar_x + bar_width // 2 - 20, bar_y - 15))
+
         # Статус отравления (только на уровне леса)
         if self.current_level == 1 and self.player_poisoned:
             poison_panel = pygame.Surface((180, 45), pygame.SRCALPHA)
@@ -2036,6 +2093,15 @@ class Player(pygame.sprite.Sprite):
         self.animation_frame = 0
         self.has_tractor = False  # Флаг для трактора
 
+        # Dash система
+        self.dash_speed = 15  # Скорость рывка
+        self.dash_duration = 10  # Длительность рывка (кадров)
+        self.dash_cooldown_max = 60  # Перезарядка 1 секунда (60 кадров)
+        self.dash_cooldown = 0  # Текущая перезарядка
+        self.dash_active = False  # Активен ли рывок
+        self.dash_timer = 0  # Таймер активного рывка
+        self.dash_direction = (0, 0)  # Направление рывка
+
         self.draw_character()
 
     def draw_character(self):
@@ -2161,6 +2227,48 @@ class Player(pygame.sprite.Sprite):
             num_rect = num.get_rect(center=(container_x + 4, 24))
             self.image.blit(num, num_rect)
 
+    def perform_dash(self):
+        """Выполнить рывок"""
+        if self.dash_cooldown > 0 or self.dash_active:
+            return False
+
+        # Определяем направление dash на основе текущего направления
+        keys = pygame.key.get_pressed()
+        dx, dy = 0, 0
+
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+            dx = -1
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            dx = 1
+        if keys[pygame.K_UP] or keys[pygame.K_w]:
+            dy = -1
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+            dy = 1
+
+        # Если нет направления, используем текущее направление взгляда
+        if dx == 0 and dy == 0:
+            if self.direction == 0:  # Вверх
+                dy = -1
+            elif self.direction == 1:  # Вправо
+                dx = 1
+            elif self.direction == 2:  # Вниз
+                dy = 1
+            else:  # Влево
+                dx = -1
+
+        # Нормализуем диагональное направление
+        length = math.sqrt(dx**2 + dy**2)
+        if length > 0:
+            dx /= length
+            dy /= length
+
+        self.dash_direction = (dx, dy)
+        self.dash_active = True
+        self.dash_timer = self.dash_duration
+        self.dash_cooldown = self.dash_cooldown_max
+
+        return True
+
     def update(self):
         """Обновление"""
         keys = pygame.key.get_pressed()
@@ -2168,33 +2276,49 @@ class Player(pygame.sprite.Sprite):
         self.vel_y = 0
         moving = False
 
-        # Скорость зависит от наличия трактора и отравления
-        speed = PLAYER_SPEED * 2 if self.has_tractor else PLAYER_SPEED
+        # Обновление cooldown dash
+        if self.dash_cooldown > 0:
+            self.dash_cooldown -= 1
 
-        # Замедление при отравлении
-        if self.game and self.game.player_poisoned:
-            speed *= 0.5  # Замедление на 50%
+        # Если активен dash
+        if self.dash_active:
+            self.dash_timer -= 1
+            if self.dash_timer <= 0:
+                self.dash_active = False
+            else:
+                # Движение с dash скоростью
+                self.vel_x = self.dash_direction[0] * self.dash_speed
+                self.vel_y = self.dash_direction[1] * self.dash_speed
+                moving = True
+        else:
+            # Обычное движение
+            # Скорость зависит от наличия трактора и отравления
+            speed = PLAYER_SPEED * 2 if self.has_tractor else PLAYER_SPEED
 
-        # Замедление в заблокированной воде
-        if self.game and self.game.player_in_blocked_water:
-            speed *= 0.6  # Замедление на 40%
+            # Замедление при отравлении
+            if self.game and self.game.player_poisoned:
+                speed *= 0.5  # Замедление на 50%
 
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            self.vel_x = -speed
-            self.direction = 3
-            moving = True
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            self.vel_x = speed
-            self.direction = 1
-            moving = True
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
-            self.vel_y = -speed
-            self.direction = 0
-            moving = True
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            self.vel_y = speed
-            self.direction = 2
-            moving = True
+            # Замедление в заблокированной воде
+            if self.game and self.game.player_in_blocked_water:
+                speed *= 0.6  # Замедление на 40%
+
+            if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+                self.vel_x = -speed
+                self.direction = 3
+                moving = True
+            if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+                self.vel_x = speed
+                self.direction = 1
+                moving = True
+            if keys[pygame.K_UP] or keys[pygame.K_w]:
+                self.vel_y = -speed
+                self.direction = 0
+                moving = True
+            if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+                self.vel_y = speed
+                self.direction = 2
+                moving = True
 
         self.rect.x += self.vel_x
         self.rect.y += self.vel_y
