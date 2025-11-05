@@ -127,6 +127,9 @@ class Game:
         # Группа NPC
         self.npcs_group = pygame.sprite.Group()
 
+        # Группа врагов-мусорщиков
+        self.litterers_group = pygame.sprite.Group()
+
         # Новые группы для интерактивных элементов
         self.grass_tiles = pygame.sprite.Group()
         self.poison_plants = pygame.sprite.Group()
@@ -202,6 +205,7 @@ class Game:
         self.river_segments.empty()
         self.water_flow_particles.empty()
         self.npcs_group.empty()
+        self.litterers_group.empty()
         self.quest_objectives.empty()
         self.quest_givers.empty()
         self.houses.empty()
@@ -454,6 +458,15 @@ class Game:
             self.river_segments.add(segment)
             self.all_sprites.add(segment)
 
+        # Спавн 3-5 мусорщиков в лесу
+        num_litterers = random.randint(3, 5)
+        for i in range(num_litterers):
+            x = random.randint(200, WORLD_WIDTH - 200)
+            y = random.randint(200, WORLD_HEIGHT - 200)
+            litterer = Litterer(x, y, WORLD_WIDTH, WORLD_HEIGHT)
+            self.litterers_group.add(litterer)
+            self.all_sprites.add(litterer)
+
     def create_city_level(self):
         """Создать уровень 2 - Город"""
         # Дороги (сначала рисуем их как основу)
@@ -541,6 +554,15 @@ class Game:
 
             attempts += 1
 
+        # Спавн 4-6 мусорщиков в городе (больше чем в лесу)
+        num_litterers = random.randint(4, 6)
+        for i in range(num_litterers):
+            x = random.randint(200, WORLD_WIDTH - 200)
+            y = random.randint(200, WORLD_HEIGHT - 200)
+            litterer = Litterer(x, y, WORLD_WIDTH, WORLD_HEIGHT)
+            self.litterers_group.add(litterer)
+            self.all_sprites.add(litterer)
+
     def create_desert_level(self):
         """Создать уровень 3 - Пустыня"""
         # Токсичные препятствия и кактусы
@@ -585,6 +607,15 @@ class Game:
                 trash_count += 1
 
             attempts += 1
+
+        # Спавн 5-7 мусорщиков в пустыне (максимум)
+        num_litterers = random.randint(5, 7)
+        for i in range(num_litterers):
+            x = random.randint(200, WORLD_WIDTH - 200)
+            y = random.randint(200, WORLD_HEIGHT - 200)
+            litterer = Litterer(x, y, WORLD_WIDTH, WORLD_HEIGHT)
+            self.litterers_group.add(litterer)
+            self.all_sprites.add(litterer)
 
     def handle_events(self):
         """Обработка событий"""
@@ -728,6 +759,30 @@ class Game:
         # Обновление NPC (проверка близости игрока)
         for npc in self.npcs_group:
             npc.check_player_nearby(self.player)
+
+        # Обновление мусорщиков и выброс мусора
+        for litterer in self.litterers_group:
+            if litterer.should_drop_litter():
+                # Создаем новый мусор на месте мусорщика
+                trash_type = random.choice(["plastic", "paper", "bottle", "can"])
+                new_trash = Trash(
+                    litterer.rect.centerx,
+                    litterer.rect.centery,
+                    trash_type,
+                    self.current_level
+                )
+                self.trash_group.add(new_trash)
+                self.all_sprites.add(new_trash)
+
+                # Небольшая визуальная обратная связь
+                for _ in range(3):
+                    particle = Particle(
+                        litterer.rect.centerx,
+                        litterer.rect.centery,
+                        (100, 70, 30)  # Коричневый цвет мусора
+                    )
+                    self.particles_group.add(particle)
+                    self.all_sprites.add(particle)
 
         # Проверка столкновений с препятствиями
         for obstacle in self.obstacles_group:
@@ -2770,6 +2825,93 @@ class NPC(pygame.sprite.Sprite):
             self.message_timer -= 1
             if self.message_timer <= 0:
                 self.showing_message = False
+
+
+class Litterer(pygame.sprite.Sprite):
+    """Враг-мусорщик, который ходит и бросает мусор"""
+    def __init__(self, x, y, world_width, world_height):
+        super().__init__()
+        self.width = 35
+        self.height = 40
+        self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+        # Границы мира для движения
+        self.world_width = world_width
+        self.world_height = world_height
+
+        # Движение
+        self.speed = 1.5
+        self.direction = random.choice(['left', 'right', 'up', 'down'])
+        self.direction_timer = random.randint(60, 180)  # Меняет направление каждые 1-3 сек
+
+        # Выброс мусора
+        self.litter_timer = random.randint(180, 300)  # Выбрасывает мусор каждые 3-5 сек
+        self.litter_cooldown = 180  # 3 секунды между выбросами
+
+        # Рисуем злодея (темные цвета)
+        self.draw_litterer()
+
+    def draw_litterer(self):
+        """Рисовать мусорщика"""
+        self.image.fill((0, 0, 0, 0))
+
+        # Голова (темная)
+        pygame.draw.circle(self.image, (80, 60, 40), (17, 12), 10)
+
+        # Злобные глаза
+        pygame.draw.circle(self.image, (255, 0, 0), (13, 10), 2)
+        pygame.draw.circle(self.image, (255, 0, 0), (21, 10), 2)
+
+        # Тело (грязная одежда)
+        pygame.draw.rect(self.image, (40, 40, 40), (7, 20, 20, 15))
+
+        # Ноги
+        pygame.draw.rect(self.image, (30, 30, 30), (10, 35, 5, 5))
+        pygame.draw.rect(self.image, (30, 30, 30), (19, 35, 5, 5))
+
+        # Мусор в руке (коричневый мешок)
+        pygame.draw.circle(self.image, (100, 70, 30), (28, 25), 4)
+
+    def update(self):
+        """Обновление мусорщика"""
+        # Случайное движение
+        self.direction_timer -= 1
+        if self.direction_timer <= 0:
+            self.direction = random.choice(['left', 'right', 'up', 'down'])
+            self.direction_timer = random.randint(60, 180)
+
+        # Движение в выбранном направлении
+        old_x, old_y = self.rect.x, self.rect.y
+
+        if self.direction == 'left':
+            self.rect.x -= self.speed
+        elif self.direction == 'right':
+            self.rect.x += self.speed
+        elif self.direction == 'up':
+            self.rect.y -= self.speed
+        elif self.direction == 'down':
+            self.rect.y += self.speed
+
+        # Проверка границ мира
+        if self.rect.x < 0 or self.rect.x > self.world_width - self.width:
+            self.rect.x = old_x
+            self.direction = random.choice(['left', 'right', 'up', 'down'])
+        if self.rect.y < 0 or self.rect.y > self.world_height - self.height:
+            self.rect.y = old_y
+            self.direction = random.choice(['left', 'right', 'up', 'down'])
+
+        # Таймер выброса мусора
+        self.litter_timer -= 1
+
+    def should_drop_litter(self):
+        """Проверка, пора ли выбросить мусор"""
+        if self.litter_timer <= 0:
+            self.litter_timer = random.randint(180, 300)
+            return True
+        return False
 
 
 class AdvancedDrone(pygame.sprite.Sprite):
