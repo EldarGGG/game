@@ -65,9 +65,9 @@ class Camera:
         self.x = 0
         self.y = 0
 
-    def apply(self, entity):
-        """Применить смещение камеры к объекту"""
-        return entity.rect.x - self.x, entity.rect.y - self.y
+    def apply(self, entity, shake_offset=(0, 0)):
+        """Применить смещение камеры к объекту (с учетом тряски)"""
+        return entity.rect.x - self.x + shake_offset[0], entity.rect.y - self.y + shake_offset[1]
 
     def update(self, target):
         """Обновить позицию камеры (плавное следование)"""
@@ -172,6 +172,12 @@ class Game:
         self.combo_max_time = 180  # 3 секунды (180 кадров при 60 FPS)
         self.combo_multiplier = 1.0  # Множитель очков
         self.max_combo = 0  # Лучшее комбо за сессию
+
+        # Эффекты сочности (juice)
+        self.screen_shake = 0  # Сила тряски экрана
+        self.screen_shake_offset = (0, 0)  # Смещение для тряски
+        self.flash_alpha = 0  # Прозрачность вспышки
+        self.flash_color = WHITE  # Цвет вспышки
 
     def new_game(self):
         """Начать новую игру"""
@@ -627,6 +633,21 @@ class Game:
                             # Обновляем макс комбо
                             if self.combo_count > self.max_combo:
                                 self.max_combo = self.combo_count
+
+                            # Эффекты сочности при высоком комбо
+                            if self.combo_multiplier >= 2.0:
+                                # Тряска экрана (сильнее при выше комбо)
+                                shake_intensity = min(int(self.combo_multiplier * 3), 15)
+                                self.screen_shake = shake_intensity
+
+                                # Цветная вспышка
+                                if self.combo_multiplier >= 4:
+                                    self.flash_color = (255, 100, 255)  # Фиолетовая
+                                elif self.combo_multiplier >= 3:
+                                    self.flash_color = (255, 50, 50)  # Красная
+                                elif self.combo_multiplier >= 2:
+                                    self.flash_color = ORANGE
+                                self.flash_alpha = 50
                     # Исправлен конфликт: T для переключения дрона вместо D
                     if event.key == pygame.K_t and self.drone:
                         if hasattr(self.drone, 'toggle'):
@@ -923,6 +944,22 @@ class Game:
                 self.combo_count = 0
                 self.combo_multiplier = 1.0
 
+        # Обновление эффектов сочности
+        if self.screen_shake > 0:
+            self.screen_shake -= 1
+            # Случайное смещение для тряски
+            shake_amount = self.screen_shake * 0.5
+            self.screen_shake_offset = (
+                random.randint(-int(shake_amount), int(shake_amount)),
+                random.randint(-int(shake_amount), int(shake_amount))
+            )
+        else:
+            self.screen_shake_offset = (0, 0)
+
+        # Затухание вспышки
+        if self.flash_alpha > 0:
+            self.flash_alpha -= 10
+
         # Условия победы/поражения
         if len(self.trash_group) == 0:
             # Рассчитываем звезды на основе оставшегося времени
@@ -1106,9 +1143,9 @@ class Game:
 
     def draw_game(self):
         """Отрисовка игрового процесса"""
-        # Рисуем тайлы земли с учетом камеры
+        # Рисуем тайлы земли с учетом камеры и тряски
         for tile in self.ground_tiles:
-            screen_pos = self.camera.apply(tile)
+            screen_pos = self.camera.apply(tile, self.screen_shake_offset)
             # Отрисовываем только видимые тайлы
             if -TILE_SIZE < screen_pos[0] < SCREEN_WIDTH and -TILE_SIZE < screen_pos[1] < SCREEN_HEIGHT:
                 self.screen.blit(tile.image, screen_pos)
@@ -1116,7 +1153,7 @@ class Game:
         # ВАЖНО: Рисуем реку РАНЬШЕ всех объектов (на уровне леса)
         if self.current_level == 1:
             for river_segment in self.river_segments:
-                screen_pos = self.camera.apply(river_segment)
+                screen_pos = self.camera.apply(river_segment, self.screen_shake_offset)
                 if -200 < screen_pos[0] < SCREEN_WIDTH + 200 and -200 < screen_pos[1] < SCREEN_HEIGHT + 200:
                     self.screen.blit(river_segment.image, screen_pos)
 
@@ -1127,7 +1164,7 @@ class Game:
             if sprite in self.river_segments:
                 continue
 
-            screen_pos = self.camera.apply(sprite)
+            screen_pos = self.camera.apply(sprite, self.screen_shake_offset)
             if -100 < screen_pos[0] < SCREEN_WIDTH + 100 and -100 < screen_pos[1] < SCREEN_HEIGHT + 100:
                 visible_sprites.append((sprite, screen_pos))
 
@@ -1147,10 +1184,16 @@ class Game:
             if sprite not in self.decorations:
                 self.screen.blit(sprite.image, screen_pos)
 
+        # Цветная вспышка при высоком комбо
+        if self.flash_alpha > 0:
+            flash_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            flash_surface.fill((*self.flash_color, self.flash_alpha))
+            self.screen.blit(flash_surface, (0, 0))
+
         # Сообщения от NPC
         for npc in self.npcs_group:
             if hasattr(npc, 'showing_message') and npc.showing_message:
-                screen_pos = self.camera.apply(npc)
+                screen_pos = self.camera.apply(npc, self.screen_shake_offset)
                 # Облако с сообщением над NPC
                 message_surface = self.font_tiny.render(npc.message, True, BLACK)
                 msg_width = message_surface.get_width() + 20
