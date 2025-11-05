@@ -1301,13 +1301,13 @@ class Game:
                 river_text = self.font_small.render("Ручей течет!", True, WHITE)
                 self.screen.blit(river_text, (30, SCREEN_HEIGHT - 48))
 
-        # КОМБО (большое отображение в центре если активно)
+        # КОМБО (компактное отображение справа вверху)
         if self.combo_count > 0:
-            # Центральное большое отображение
-            combo_y = SCREEN_HEIGHT // 2 - 150
+            combo_x = SCREEN_WIDTH - 220
+            combo_y = 95
 
-            # Пульсирующий эффект
-            pulse = abs(math.sin(pygame.time.get_ticks() / 100)) * 10
+            # Пульсирующий эффект (меньше)
+            pulse = abs(math.sin(pygame.time.get_ticks() / 100)) * 3
 
             # Цвет зависит от множителя
             if self.combo_multiplier >= 4:
@@ -1319,41 +1319,41 @@ class Game:
             else:
                 combo_color = YELLOW  # Желтый
 
-            # Панель комбо
-            combo_width = 300 + int(pulse)
-            combo_height = 100
+            # Панель комбо (компактная)
+            combo_width = 200 + int(pulse)
+            combo_height = 70
             combo_panel = pygame.Surface((combo_width, combo_height), pygame.SRCALPHA)
-            combo_panel.fill((0, 0, 0, 150))
-            pygame.draw.rect(combo_panel, combo_color, (0, 0, combo_width, combo_height), 4, 15)
-            self.screen.blit(combo_panel, (SCREEN_WIDTH // 2 - combo_width // 2, combo_y))
+            combo_panel.fill((0, 0, 0, 180))
+            pygame.draw.rect(combo_panel, combo_color, (0, 0, combo_width, combo_height), 3, 10)
+            self.screen.blit(combo_panel, (combo_x, combo_y))
 
-            # Текст COMBO
-            combo_label = self.font_large.render("COMBO", True, combo_color)
-            combo_label_rect = combo_label.get_rect(center=(SCREEN_WIDTH // 2, combo_y + 30))
+            # Текст COMBO (меньше)
+            combo_label = self.font_medium.render("COMBO", True, combo_color)
+            combo_label_rect = combo_label.get_rect(center=(combo_x + combo_width // 2, combo_y + 20))
             self.screen.blit(combo_label, combo_label_rect)
 
             # Множитель
             multiplier_text = f"x{self.combo_multiplier:.1f}"
-            multiplier_surf = self.font_large.render(multiplier_text, True, WHITE)
-            multiplier_rect = multiplier_surf.get_rect(center=(SCREEN_WIDTH // 2, combo_y + 65))
+            multiplier_surf = self.font_medium.render(multiplier_text, True, WHITE)
+            multiplier_rect = multiplier_surf.get_rect(center=(combo_x + combo_width // 2, combo_y + 45))
             self.screen.blit(multiplier_surf, multiplier_rect)
 
-            # Прогресс-бар комбо-таймера (внизу панели)
+            # Прогресс-бар комбо-таймера (внизу панели, тоньше)
             bar_width = combo_width - 20
-            bar_height = 8
-            bar_x = SCREEN_WIDTH // 2 - bar_width // 2
-            bar_y = combo_y + combo_height - 15
+            bar_height = 6
+            bar_x = combo_x + 10
+            bar_y = combo_y + combo_height - 12
 
             # Фон бара
-            pygame.draw.rect(self.screen, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height), 0, 4)
+            pygame.draw.rect(self.screen, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height), 0, 3)
 
             # Заполненная часть
             fill_width = int((self.combo_timer / self.combo_max_time) * bar_width)
             if fill_width > 0:
-                pygame.draw.rect(self.screen, combo_color, (bar_x, bar_y, fill_width, bar_height), 0, 4)
+                pygame.draw.rect(self.screen, combo_color, (bar_x, bar_y, fill_width, bar_height), 0, 3)
 
             # Обводка
-            pygame.draw.rect(self.screen, WHITE, (bar_x, bar_y, bar_width, bar_height), 2, 4)
+            pygame.draw.rect(self.screen, WHITE, (bar_x, bar_y, bar_width, bar_height), 1, 3)
 
         # Активные квесты
         if self.active_quests:
