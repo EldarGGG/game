@@ -82,7 +82,7 @@ class Camera:
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Eco Ranger - Enhanced Edition")
+        pygame.display.set_caption("Eco Ranger - Жақсартылған Нұсқа")
         self.clock = pygame.time.Clock()
         self.running = True
         self.state = GameState.MENU
@@ -372,7 +372,7 @@ class Game:
         # Квест 1: Очистить мусорный бак около первого дома
         quest1 = Quest(
             quest_id=1,
-            description="Очисти мой мусорный бак!",
+            description="Қоқыс жәшігін тазала!",
             reward=50,
             objective_type="trash_bin",
             objective_count=1
@@ -393,7 +393,7 @@ class Game:
         # Квест 2: Очистить мусорный бак около второго дома
         quest2 = Quest(
             quest_id=2,
-            description="Помоги очистить мусор!",
+            description="Қоқысты тазалауға көмектес!",
             reward=50,
             objective_type="trash_bin",
             objective_count=1
@@ -1176,7 +1176,7 @@ class Game:
         pygame.draw.circle(self.screen, (50, 200, 50), (SCREEN_WIDTH // 2 - 150, subtitle_y), 12)
         pygame.draw.circle(self.screen, WHITE, (SCREEN_WIDTH // 2 - 150, subtitle_y), 12, 2)
 
-        subtitle = self.font_medium.render("Save the Planet!", True, (200, 255, 200))
+        subtitle = self.font_medium.render("Планетаны сақта!", True, (200, 255, 200))
         subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH // 2 + 20, subtitle_y))
         self.screen.blit(subtitle, subtitle_rect)
 
@@ -1198,9 +1198,9 @@ class Game:
 
         # КНОПКИ (красивые современные)
         buttons = [
-            {"text": "НАЧАТЬ ИГРУ", "key": "ENTER", "color": (50, 200, 50), "y_offset": 0},
-            {"text": "МАГАЗИН", "key": "S", "color": (200, 150, 50), "y_offset": 80},
-            {"text": "ВЫХОД", "key": "ESC", "color": (200, 50, 50), "y_offset": 160}
+            {"text": "ОЙЫНДЫ БАСТАУ", "key": "ENTER", "color": (50, 200, 50), "y_offset": 0},
+            {"text": "ДҮКЕН", "key": "S", "color": (200, 150, 50), "y_offset": 80},
+            {"text": "ШЫҒУ", "key": "ESC", "color": (200, 50, 50), "y_offset": 160}
         ]
 
         button_start_y = coin_y + 100
@@ -1240,7 +1240,7 @@ class Game:
 
         # Управление внизу (компактно)
         control_y = SCREEN_HEIGHT - 60
-        controls = "WASD/Стрелки - движение  |  E - собрать  |  T - дрон"
+        controls = "WASD/Бағдаршалар - қозғалу  |  E - жинау  |  T - дрон"
         control_text = self.font_tiny.render(controls, True, (150, 200, 150))
         control_rect = control_text.get_rect(center=(SCREEN_WIDTH // 2, control_y))
         self.screen.blit(control_text, control_rect)
@@ -1352,7 +1352,7 @@ class Game:
         self.screen.blit(score_text, (55, 12))
 
         # Уровень
-        level_text = self.font_small.render(f"Уровень {self.current_level}/3", True, WHITE)
+        level_text = self.font_small.render(f"Деңгей {self.current_level}/3", True, WHITE)
         self.screen.blit(level_text, (20, 55))
 
         # Оставшийся мусор
@@ -1402,7 +1402,7 @@ class Game:
             inv_panel.fill((0, 100, 0, 200))
             self.screen.blit(inv_panel, (SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT - 70))
 
-            inv_text = self.font_small.render(f"Сумка: {self.player.carrying_trash}/{self.player.max_trash}", True, WHITE)
+            inv_text = self.font_small.render(f"Сөмке: {self.player.carrying_trash}/{self.player.max_trash}", True, WHITE)
             self.screen.blit(inv_text, (SCREEN_WIDTH // 2 - 90, SCREEN_HEIGHT - 63))
 
         # Статус дрона
@@ -1412,7 +1412,7 @@ class Game:
             drone_panel.fill(drone_color)
             self.screen.blit(drone_panel, (350, 10))
 
-            drone_status = "ДРОН ВКЛ" if self.drone.active else "ДРОН ВЫКЛ"
+            drone_status = "ДРОН ҚОС" if self.drone.active else "ДРОН ӨШІР"
             drone_text = self.font_small.render(drone_status, True, WHITE)
             self.screen.blit(drone_text, (360, 15))
 
@@ -1429,7 +1429,7 @@ class Game:
         self.screen.blit(dash_panel, (dash_x, dash_y))
 
         # Текст DASH
-        dash_label = self.font_tiny.render("РЫВОК [SPACE]", True, (150, 200, 255))
+        dash_label = self.font_tiny.render("СЕКІРУ [SPACE]", True, (150, 200, 255))
         self.screen.blit(dash_label, (dash_x + 10, dash_y + 5))
 
         # Прогресс-бар cooldown
@@ -1455,7 +1455,7 @@ class Game:
         else:
             # Готов к использованию
             pygame.draw.rect(self.screen, (150, 255, 150), (bar_x, bar_y, bar_width, bar_height), 0, 3)
-            ready_text = self.font_tiny.render("ГОТОВ!", True, (150, 255, 150))
+            ready_text = self.font_tiny.render("ДАЙЫН!", True, (150, 255, 150))
             self.screen.blit(ready_text, (bar_x + bar_width // 2 - 20, bar_y - 15))
 
         # Статус отравления (только на уровне леса)
@@ -1464,12 +1464,12 @@ class Game:
             poison_panel.fill((120, 50, 150, 200))
             self.screen.blit(poison_panel, (SCREEN_WIDTH // 2 - 90, SCREEN_HEIGHT - 130))
 
-            poison_text = self.font_small.render("ОТРАВЛЕН!", True, (255, 100, 255))
+            poison_text = self.font_small.render("УЛАНДЫ!", True, (255, 100, 255))
             self.screen.blit(poison_text, (SCREEN_WIDTH // 2 - 70, SCREEN_HEIGHT - 125))
 
             # Таймер
             time_left = self.poison_timer // 60
-            timer_text = self.font_tiny.render(f"Найдите аптечку! {time_left}с", True, WHITE)
+            timer_text = self.font_tiny.render(f"Дәріхананы тап! {time_left}с", True, WHITE)
             self.screen.blit(timer_text, (SCREEN_WIDTH // 2 - 70, SCREEN_HEIGHT - 105))
 
         # Статус ручья (только на уровне леса)
@@ -1480,14 +1480,14 @@ class Game:
                 river_panel.fill((0, 100, 150, 200))
                 self.screen.blit(river_panel, (20, SCREEN_HEIGHT - 60))
 
-                river_text = self.font_tiny.render(f"Ручей заблокирован! Мусора: {river_trash_count}", True, WATER_BLUE)
+                river_text = self.font_tiny.render(f"Өзен бұғатталған! Қоқыс: {river_trash_count}", True, WATER_BLUE)
                 self.screen.blit(river_text, (30, SCREEN_HEIGHT - 50))
             elif not self.river_blocked:
                 river_panel = pygame.Surface((180, 35), pygame.SRCALPHA)
                 river_panel.fill((0, 150, 200, 200))
                 self.screen.blit(river_panel, (20, SCREEN_HEIGHT - 55))
 
-                river_text = self.font_small.render("Ручей течет!", True, WHITE)
+                river_text = self.font_small.render("Өзен ағады!", True, WHITE)
                 self.screen.blit(river_text, (30, SCREEN_HEIGHT - 48))
 
         # КОМБО (компактное отображение справа вверху)
@@ -1553,13 +1553,13 @@ class Game:
                     quest_panel.fill((200, 150, 0, 200))
                     self.screen.blit(quest_panel, (SCREEN_WIDTH - 300, quest_y))
 
-                    quest_title = self.font_tiny.render("КВЕСТ:", True, YELLOW)
+                    quest_title = self.font_tiny.render("ТАПСЫРМА:", True, YELLOW)
                     self.screen.blit(quest_title, (SCREEN_WIDTH - 290, quest_y + 5))
 
                     quest_desc = self.font_tiny.render(quest.description, True, WHITE)
                     self.screen.blit(quest_desc, (SCREEN_WIDTH - 290, quest_y + 25))
 
-                    reward_text = self.font_tiny.render(f"Награда: {quest.reward} монет", True, GREEN)
+                    reward_text = self.font_tiny.render(f"Сыйлық: {quest.reward} монета", True, GREEN)
                     self.screen.blit(reward_text, (SCREEN_WIDTH - 290, quest_y + 42))
 
                     quest_y += 70
@@ -1572,7 +1572,7 @@ class Game:
                     hint_panel.fill((255, 215, 0, 220))
                     self.screen.blit(hint_panel, (SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT - 120))
 
-                    hint_text = self.font_small.render("Нажми E", True, BLACK)
+                    hint_text = self.font_small.render("E-ны бас", True, BLACK)
                     self.screen.blit(hint_text, (SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT - 113))
 
         # Миникарта
@@ -1629,11 +1629,11 @@ class Game:
         overlay.fill(BLACK)
         self.screen.blit(overlay, (0, 0))
 
-        pause_text = self.font_large.render("ПАУЗА", True, YELLOW)
+        pause_text = self.font_large.render("КІДІРІС", True, YELLOW)
         pause_rect = pause_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
 
         # Тень
-        shadow = self.font_large.render("ПАУЗА", True, DARK_GRAY)
+        shadow = self.font_large.render("КІДІРІС", True, DARK_GRAY)
         shadow_rect = shadow.get_rect(center=(SCREEN_WIDTH // 2 + 3, SCREEN_HEIGHT // 2 + 3))
         self.screen.blit(shadow, shadow_rect)
         self.screen.blit(pause_text, pause_rect)
@@ -1645,10 +1645,10 @@ class Game:
         overlay.fill(BLACK)
         self.screen.blit(overlay, (0, 0))
 
-        complete_text = self.font_large.render("УРОВЕНЬ ПРОЙДЕН!", True, GREEN)
+        complete_text = self.font_large.render("ДЕҢГЕЙ ӨТІЛДІ!", True, GREEN)
         complete_rect = complete_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 60))
 
-        shadow = self.font_large.render("УРОВЕНЬ ПРОЙДЕН!", True, DARK_GREEN)
+        shadow = self.font_large.render("ДЕҢГЕЙ ӨТІЛДІ!", True, DARK_GREEN)
         shadow_rect = shadow.get_rect(center=(SCREEN_WIDTH // 2 + 3, SCREEN_HEIGHT // 2 - 57))
         self.screen.blit(shadow, shadow_rect)
         self.screen.blit(complete_text, complete_rect)
@@ -1679,15 +1679,15 @@ class Game:
         time_spent = self.level_time_limit - self.level_timer
         time_minutes = int(time_spent // 60)
         time_seconds = int(time_spent % 60)
-        time_text = self.font_medium.render(f"Время: {time_minutes}:{time_seconds:02d}", True, WHITE)
+        time_text = self.font_medium.render(f"Уақыт: {time_minutes}:{time_seconds:02d}", True, WHITE)
         time_rect = time_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 60))
         self.screen.blit(time_text, time_rect)
 
-        score_text = self.font_medium.render(f"Очки: {self.score}", True, YELLOW)
+        score_text = self.font_medium.render(f"Ұпай: {self.score}", True, YELLOW)
         score_rect = score_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100))
         self.screen.blit(score_text, score_rect)
 
-        continue_text = self.font_small.render("Нажмите ENTER", True, WHITE)
+        continue_text = self.font_small.render("ENTER-ді бас", True, WHITE)
         continue_rect = continue_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 150))
         self.screen.blit(continue_text, continue_rect)
 
@@ -1699,19 +1699,19 @@ class Game:
             color = (intensity, 0, 0)
             pygame.draw.rect(self.screen, color, (0, y, SCREEN_WIDTH, 5))
 
-        game_over_text = self.font_large.render("GAME OVER", True, WHITE)
+        game_over_text = self.font_large.render("ОЙЫН АЯҚТАЛДЫ", True, WHITE)
         game_over_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
 
-        shadow = self.font_large.render("GAME OVER", True, DARK_GRAY)
+        shadow = self.font_large.render("ОЙЫН АЯҚТАЛДЫ", True, DARK_GRAY)
         shadow_rect = shadow.get_rect(center=(SCREEN_WIDTH // 2 + 4, SCREEN_HEIGHT // 2 - 46))
         self.screen.blit(shadow, shadow_rect)
         self.screen.blit(game_over_text, game_over_rect)
 
-        score_text = self.font_medium.render(f"Очки: {self.score}", True, YELLOW)
+        score_text = self.font_medium.render(f"Ұпай: {self.score}", True, YELLOW)
         score_rect = score_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50))
         self.screen.blit(score_text, score_rect)
 
-        continue_text = self.font_small.render("ENTER - в меню", True, WHITE)
+        continue_text = self.font_small.render("ENTER - мәзірге", True, WHITE)
         continue_rect = continue_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 120))
         self.screen.blit(continue_text, continue_rect)
 
@@ -1737,11 +1737,11 @@ class Game:
         # Заголовок с эффектом
         title_y = 50
         for offset in [(4, 4), (2, 2)]:
-            shadow = self.font_large.render("МАГАЗИН УЛУЧШЕНИЙ", True, (100, 70, 20))
+            shadow = self.font_large.render("ЖАҚСАРТУ ДҮКЕНІ", True, (100, 70, 20))
             shadow_rect = shadow.get_rect(center=(SCREEN_WIDTH // 2 + offset[0], title_y + offset[1]))
             self.screen.blit(shadow, shadow_rect)
 
-        title = self.font_large.render("МАГАЗИН УЛУЧШЕНИЙ", True, (255, 215, 0))
+        title = self.font_large.render("ЖАҚСАРТУ ДҮКЕНІ", True, (255, 215, 0))
         title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, title_y))
         self.screen.blit(title, title_rect)
 
@@ -1774,7 +1774,7 @@ class Game:
         pygame.draw.circle(self.screen, (255, 180, 0), (coin_icon_x, coin_icon_y), 18, 2)
 
         # Текст баланса
-        balance_label = self.font_small.render("Ваш баланс:", True, WHITE)
+        balance_label = self.font_small.render("Сіздің балансыңыз:", True, WHITE)
         self.screen.blit(balance_label, (coin_icon_x + 40, balance_y + 12))
 
         balance_amount = self.font_large.render(f"{self.total_coins}", True, WHITE)
@@ -1784,10 +1784,10 @@ class Game:
         items = [
             {
                 "id": "bag",
-                "title": "Большая Сумка",
+                "title": "Үлкен сөмке",
                 "price": self.upgrade_prices['bag'],
-                "description": "Увеличивает вместимость",
-                "stats": "10 единиц мусора",
+                "description": "Сыйымдылықты арттырады",
+                "stats": "10 қоқыс бірлігі",
                 "icon_color": (100, 150, 100),
                 "key": "1"
             },
@@ -1795,17 +1795,17 @@ class Game:
                 "id": "tractor",
                 "title": "Трактор",
                 "price": self.upgrade_prices['tractor'],
-                "description": "Быстрее собирает мусор",
-                "stats": "Скорость x2, 15 единиц",
+                "description": "Қоқысты тезірек жинайды",
+                "stats": "Жылдамдық x2, 15 бірлік",
                 "icon_color": (200, 50, 50),
                 "key": "2"
             },
             {
                 "id": "advanced_drone",
-                "title": "Умный Дрон",
+                "title": "Ақылды дрон",
                 "price": self.upgrade_prices['advanced_drone'],
-                "description": "Автоматический сбор",
-                "stats": "Клик мышью для сбора",
+                "description": "Автоматты жинау",
+                "stats": "Тышқанды басу арқылы жинау",
                 "icon_color": (50, 150, 255),
                 "key": "3"
             }
@@ -1874,10 +1874,10 @@ class Game:
 
             # Цена и статус
             if owned:
-                status_surf = self.font_small.render("✓ КУПЛЕНО", True, (100, 255, 100))
+                status_surf = self.font_small.render("✓ САТЫП АЛЫНДЫ", True, (100, 255, 100))
                 self.screen.blit(status_surf, (icon_x + 50, card_y + 95))
             else:
-                price_surf = self.font_small.render(f"{item['price']} монет", True, YELLOW)
+                price_surf = self.font_small.render(f"{item['price']} монета", True, YELLOW)
                 self.screen.blit(price_surf, (icon_x + 50, card_y + 95))
 
                 # Кнопка покупки
@@ -1899,7 +1899,7 @@ class Game:
         pygame.draw.rect(inst_bg, WHITE, (0, 0, SCREEN_WIDTH - 100, 50), 2, 10)
         self.screen.blit(inst_bg, (50, SCREEN_HEIGHT - 80))
 
-        inst_text = self.font_small.render("Нажмите 1, 2 или 3 для покупки  |  ESC - вернуться в меню", True, WHITE)
+        inst_text = self.font_small.render("Сатып алу үшін 1, 2 немесе 3-ті басыңыз  |  ESC - мәзірге оралу", True, WHITE)
         inst_rect = inst_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 55))
         self.screen.blit(inst_text, inst_rect)
 
@@ -1914,12 +1914,12 @@ class Game:
             # Зеленая панель для купленных товаров
             panel.fill((0, 100, 0, 150))
             status_color = GREEN
-            status_text = "✓ КУПЛЕНО"
+            status_text = "✓ САТЫП АЛЫНДЫ"
         else:
             # Синяя панель для доступных товаров
             panel.fill((0, 50, 150, 150))
             status_color = YELLOW
-            status_text = "Доступно"
+            status_text = "Қол жетімді"
 
         pygame.draw.rect(panel, WHITE, (0, 0, panel_width, panel_height), 3, 10)
         self.screen.blit(panel, (x, y))
@@ -1981,7 +1981,7 @@ class Game:
             fade = min(1.0, self.cutscene_timer / 60)
             title_alpha = int(255 * fade)
 
-            title_text = "РЕКА ВОССТАНОВЛЕНА!"
+            title_text = "ӨЗЕН ҚАЛПЫНА КЕЛТІРІЛДІ!"
             title = self.font_large.render(title_text, True, (100, 200, 255))
             title.set_alpha(title_alpha)
             title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 100))
@@ -1995,7 +1995,7 @@ class Game:
 
             if self.cutscene_timer > 30:
                 subtitle_alpha = int(255 * min(1.0, (self.cutscene_timer - 30) / 40))
-                subtitle = self.font_medium.render("Жители деревни радуются!", True, YELLOW)
+                subtitle = self.font_medium.render("Ауыл тұрғындары қуанышты!", True, YELLOW)
                 subtitle.set_alpha(subtitle_alpha)
                 subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH // 2, 160))
                 self.screen.blit(subtitle, subtitle_rect)
@@ -2942,7 +2942,7 @@ class Road(pygame.sprite.Sprite):
 
 class NPC(pygame.sprite.Sprite):
     """NPC который хвалит игрока"""
-    def __init__(self, x, y, name="Гражданин"):
+    def __init__(self, x, y, name="Азамат"):
         super().__init__()
         self.width = 35
         self.height = 40
@@ -2952,11 +2952,11 @@ class NPC(pygame.sprite.Sprite):
         self.rect.y = y
         self.name = name
         self.praise_messages = [
-            "Спасибо за чистоту!",
-            "Вы делаете важное дело!",
-            "Молодец, эко-герой!",
-            "Наш город стал чище!",
-            "Продолжайте в том же духе!"
+            "Таза болғаны үшін рахмет!",
+            "Сіз маңызды іс істеп жатырсыз!",
+            "Жарайсың, эко-батыр!",
+            "Біздің қала таза болды!",
+            "Осылай жалғастырыңыз!"
         ]
         self.showing_message = False
         self.message = ""
