@@ -490,7 +490,7 @@ class Game:
         for i in range(num_litterers):
             x = random.randint(200, WORLD_WIDTH - 200)
             y = random.randint(200, WORLD_HEIGHT - 200)
-            litterer = Litterer(x, y, WORLD_WIDTH, WORLD_HEIGHT)
+            litterer = Litterer(x, y, WORLD_WIDTH, WORLD_HEIGHT, level=1)
             self.litterers_group.add(litterer)
             self.all_sprites.add(litterer)
 
@@ -586,7 +586,7 @@ class Game:
         for i in range(num_litterers):
             x = random.randint(200, WORLD_WIDTH - 200)
             y = random.randint(200, WORLD_HEIGHT - 200)
-            litterer = Litterer(x, y, WORLD_WIDTH, WORLD_HEIGHT)
+            litterer = Litterer(x, y, WORLD_WIDTH, WORLD_HEIGHT, level=2)
             self.litterers_group.add(litterer)
             self.all_sprites.add(litterer)
 
@@ -640,7 +640,7 @@ class Game:
         for i in range(num_litterers):
             x = random.randint(200, WORLD_WIDTH - 200)
             y = random.randint(200, WORLD_HEIGHT - 200)
-            litterer = Litterer(x, y, WORLD_WIDTH, WORLD_HEIGHT)
+            litterer = Litterer(x, y, WORLD_WIDTH, WORLD_HEIGHT, level=3)
             self.litterers_group.add(litterer)
             self.all_sprites.add(litterer)
 
@@ -681,6 +681,20 @@ class Game:
                         self.buy_upgrade('advanced_drone')
 
                 if self.state == GameState.PLAYING:
+                    # Удар по врагам (клавиша F)
+                    if event.key == pygame.K_f:
+                        # Создаем зону удара вокруг игрока
+                        punch_rect = self.player.rect.inflate(30, 30)
+                        for litterer in self.litterers_group:
+                            if punch_rect.colliderect(litterer.rect) and not litterer.stunned:
+                                litterer.get_stunned()
+                                # Эффект удара (желтые частицы)
+                                for _ in range(15):
+                                    particle = Particle(litterer.rect.centerx,
+                                                      litterer.rect.centery, YELLOW)
+                                    self.particles_group.add(particle)
+                                    self.all_sprites.add(particle)
+
                     if event.key == pygame.K_e:
                         result = self.player.collect_trash(self.trash_group)
                         collected = result["count"]
@@ -3097,7 +3111,7 @@ class NPC(pygame.sprite.Sprite):
 
 class Litterer(pygame.sprite.Sprite):
     """Враг-мусорщик, который ходит и бросает мусор"""
-    def __init__(self, x, y, world_width, world_height):
+    def __init__(self, x, y, world_width, world_height, level=1):
         super().__init__()
         self.width = 35
         self.height = 40
@@ -3110,14 +3124,29 @@ class Litterer(pygame.sprite.Sprite):
         self.world_width = world_width
         self.world_height = world_height
 
+        # Уровень определяет параметры
+        self.level = level
+
         # Движение
         self.speed = 1.5
         self.direction = random.choice(['left', 'right', 'up', 'down'])
         self.direction_timer = random.randint(60, 180)  # Меняет направление каждые 1-3 сек
 
-        # Выброс мусора
-        self.litter_timer = random.randint(180, 300)  # Выбрасывает мусор каждые 3-5 сек
-        self.litter_cooldown = 180  # 3 секунды между выбросами
+        # Выброс мусора (зависит от уровня)
+        # Уровень 1: 20 секунд (1200 кадров), Уровень 2: 15 секунд (900), Уровень 3: 10 секунд (600)
+        litter_cooldowns = {1: 1200, 2: 900, 3: 600}
+        self.litter_cooldown = litter_cooldowns.get(level, 1200)
+        self.litter_timer = random.randint(self.litter_cooldown // 2, self.litter_cooldown)
+
+        # Максимум мусора на уровень (1: 10, 2: 15, 3: 20)
+        self.max_trash_spawned = {1: 10, 2: 15, 3: 20}.get(level, 10)
+        self.trash_spawned = 0
+
+        # Механика оглушения
+        self.stunned = False
+        self.stun_timer = 0
+        self.stun_duration = 3600  # 60 секунд (60 FPS * 60)
+        self.star_rotation = 0  # Для анимации звездочек
 
         # Рисуем злодея (темные цвета)
         self.draw_litterer()
@@ -3126,25 +3155,85 @@ class Litterer(pygame.sprite.Sprite):
         """Рисовать мусорщика"""
         self.image.fill((0, 0, 0, 0))
 
-        # Голова (темная)
-        pygame.draw.circle(self.image, (80, 60, 40), (17, 12), 10)
+        if self.stunned:
+            # Присевший злодей
+            # Голова (темная, ниже)
+            pygame.draw.circle(self.image, (80, 60, 40), (17, 18), 10)
 
-        # Злобные глаза
-        pygame.draw.circle(self.image, (255, 0, 0), (13, 10), 2)
-        pygame.draw.circle(self.image, (255, 0, 0), (21, 10), 2)
+            # Закрытые глаза (крестики)
+            pygame.draw.line(self.image, BLACK, (11, 16), (15, 20), 2)
+            pygame.draw.line(self.image, BLACK, (15, 16), (11, 20), 2)
+            pygame.draw.line(self.image, BLACK, (19, 16), (23, 20), 2)
+            pygame.draw.line(self.image, BLACK, (23, 16), (19, 20), 2)
 
-        # Тело (грязная одежда)
-        pygame.draw.rect(self.image, (40, 40, 40), (7, 20, 20, 15))
+            # Тело (присевший, короче)
+            pygame.draw.rect(self.image, (40, 40, 40), (7, 26, 20, 10))
 
-        # Ноги
-        pygame.draw.rect(self.image, (30, 30, 30), (10, 35, 5, 5))
-        pygame.draw.rect(self.image, (30, 30, 30), (19, 35, 5, 5))
+            # Ноги (согнутые)
+            pygame.draw.rect(self.image, (30, 30, 30), (10, 36, 5, 4))
+            pygame.draw.rect(self.image, (30, 30, 30), (19, 36, 5, 4))
 
-        # Мусор в руке (коричневый мешок)
-        pygame.draw.circle(self.image, (100, 70, 30), (28, 25), 4)
+            # Звездочки над головой (вращающиеся)
+            self.draw_stars()
+        else:
+            # Обычный злодей
+            # Голова (темная)
+            pygame.draw.circle(self.image, (80, 60, 40), (17, 12), 10)
+
+            # Злобные глаза
+            pygame.draw.circle(self.image, (255, 0, 0), (13, 10), 2)
+            pygame.draw.circle(self.image, (255, 0, 0), (21, 10), 2)
+
+            # Тело (грязная одежда)
+            pygame.draw.rect(self.image, (40, 40, 40), (7, 20, 20, 15))
+
+            # Ноги
+            pygame.draw.rect(self.image, (30, 30, 30), (10, 35, 5, 5))
+            pygame.draw.rect(self.image, (30, 30, 30), (19, 35, 5, 5))
+
+            # Мусор в руке (коричневый мешок)
+            pygame.draw.circle(self.image, (100, 70, 30), (28, 25), 4)
+
+    def draw_stars(self):
+        """Рисовать звездочки над головой"""
+        # 3 звездочки кружатся над головой
+        for i in range(3):
+            angle = self.star_rotation + (i * 120)  # 3 звезды на 120 градусов друг от друга
+            rad = math.radians(angle)
+            x = 17 + int(math.cos(rad) * 15)
+            y = 5 + int(math.sin(rad) * 8)
+
+            # Рисуем маленькую звездочку
+            star_size = 4
+            points = []
+            for j in range(10):
+                star_angle = math.pi / 2 + j * math.pi / 5 + math.radians(self.star_rotation)
+                radius = star_size if j % 2 == 0 else star_size // 2
+                px = x + int(math.cos(star_angle) * radius)
+                py = y + int(math.sin(star_angle) * radius)
+                points.append((px, py))
+
+            pygame.draw.polygon(self.image, YELLOW, points)
+            pygame.draw.polygon(self.image, ORANGE, points, 1)
+
+    def get_stunned(self):
+        """Оглушить мусорщика"""
+        self.stunned = True
+        self.stun_timer = self.stun_duration
+        self.star_rotation = 0
 
     def update(self):
         """Обновление мусорщика"""
+        # Обработка оглушения
+        if self.stunned:
+            self.stun_timer -= 1
+            self.star_rotation += 5  # Вращаем звездочки
+            if self.stun_timer <= 0:
+                self.stunned = False
+            # Перерисовываем злодея
+            self.draw_litterer()
+            return  # Не двигаемся и не выбрасываем мусор когда оглушен
+
         # Случайное движение
         self.direction_timer -= 1
         if self.direction_timer <= 0:
@@ -3176,8 +3265,17 @@ class Litterer(pygame.sprite.Sprite):
 
     def should_drop_litter(self):
         """Проверка, пора ли выбросить мусор"""
+        # Не выбрасываем если оглушен
+        if self.stunned:
+            return False
+
+        # Не выбрасываем если достигли лимита
+        if self.trash_spawned >= self.max_trash_spawned:
+            return False
+
         if self.litter_timer <= 0:
-            self.litter_timer = random.randint(180, 300)
+            self.litter_timer = self.litter_cooldown  # Используем кулдаун в зависимости от уровня
+            self.trash_spawned += 1
             return True
         return False
 
