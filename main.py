@@ -1126,7 +1126,7 @@ class Game:
             self.flash_alpha -= 10
 
         # Условия победы/поражения
-        if len(self.trash_group) == 0:
+        if len(self.trash_group) == 0 and self.player.carrying_trash == 0:
             # Рассчитываем звезды на основе оставшегося времени
             time_spent = self.level_time_limit - self.level_timer
             if time_spent <= 90:  # Менее 1:30
