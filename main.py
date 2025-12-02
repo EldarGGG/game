@@ -14,6 +14,29 @@ from enum import Enum
 pygame.init()
 pygame.mixer.init()
 
+# Загрузка звуков
+try:
+    # Звуковые эффекты
+    sound_pickup = pygame.mixer.Sound('pickup.wav')
+    sound_trash_dump = pygame.mixer.Sound('trash_dump.wav')
+    sound_dash = pygame.mixer.Sound('dash.wav')
+    sound_poison = pygame.mixer.Sound('poison.wav')
+    sound_heal = pygame.mixer.Sound('heal.wav')
+    sound_button = pygame.mixer.Sound('button.wav')
+
+    # Устанавливаем громкость эффектов
+    sound_pickup.set_volume(0.3)
+    sound_trash_dump.set_volume(0.4)
+    sound_dash.set_volume(0.5)
+    sound_poison.set_volume(0.6)
+    sound_heal.set_volume(0.5)
+    sound_button.set_volume(0.3)
+
+    SOUNDS_ENABLED = True
+except:
+    SOUNDS_ENABLED = False
+    print("Не удалось загрузить звуки")
+
 # Константы экрана
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 700
@@ -98,6 +121,10 @@ class Game:
         self.font_medium = pygame.font.Font(None, 48)
         self.font_small = pygame.font.Font(None, 32)
         self.font_tiny = pygame.font.Font(None, 20)
+
+        # Музыка
+        self.current_music = None
+        pygame.mixer.music.set_volume(0.3)
 
         # Группы спрайтов
         self.all_sprites = pygame.sprite.Group()
@@ -636,8 +663,12 @@ class Game:
 
                 if self.state == GameState.MENU:
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        if SOUNDS_ENABLED:
+                            sound_button.play()
                         self.new_game()
                     if event.key == pygame.K_s:
+                        if SOUNDS_ENABLED:
+                            sound_button.play()
                         self.state = GameState.SHOP
 
                 if self.state == GameState.SHOP:
@@ -759,6 +790,10 @@ class Game:
         if self.total_coins >= price:
             self.total_coins -= price
             self.upgrades[upgrade_name] = True
+
+            # Звук покупки
+            if SOUNDS_ENABLED:
+                sound_button.play()
 
             # Если купили продвинутый дрон, заменяем старый дрон
             if upgrade_name == 'advanced_drone' and self.current_level == 3:
@@ -885,6 +920,10 @@ class Game:
                         self.player_poisoned = True
                         self.poison_timer = self.poison_duration
 
+                        # Звук отравления
+                        if SOUNDS_ENABLED:
+                            sound_poison.play()
+
                         # Создаем аптечку рядом
                         heal_x = poison_plant.rect.x + random.randint(80, 150)
                         heal_y = poison_plant.rect.y + random.randint(-50, 50)
@@ -914,6 +953,10 @@ class Game:
                         self.poison_timer = 0
                         heal_station.kill()
 
+                        # Звук лечения
+                        if SOUNDS_ENABLED:
+                            sound_heal.play()
+
                         # Эффект исцеления
                         for _ in range(15):
                             particle = Particle(self.player.rect.centerx,
@@ -936,6 +979,10 @@ class Game:
             total_points = int(base_points * self.combo_multiplier)
             self.score += total_points
             self.player.carrying_trash = 0
+
+            # Звук выброса мусора
+            if SOUNDS_ENABLED:
+                sound_trash_dump.play()
 
             # Больше частиц при высоком комбо
             particle_count = 15 + int(self.combo_multiplier * 5)
@@ -1113,8 +1160,21 @@ class Game:
 
         pygame.display.flip()
 
+    def play_music(self, music_file):
+        """Воспроизвести музыку с зацикливанием"""
+        if self.current_music != music_file:
+            try:
+                pygame.mixer.music.load(music_file)
+                pygame.mixer.music.play(-1)  # -1 = бесконечное зацикливание
+                self.current_music = music_file
+            except:
+                pass
+
     def draw_menu(self):
         """Отрисовка меню - современный дизайн"""
+        # Воспроизводим музыку меню
+        self.play_music('menu_music.wav')
+
         # Анимированный градиентный фон (зелено-синий природный)
         time_offset = pygame.time.get_ticks() / 1000
         for y in range(0, SCREEN_HEIGHT, 2):
@@ -1247,6 +1307,9 @@ class Game:
 
     def draw_game(self):
         """Отрисовка игрового процесса"""
+        # Воспроизводим игровую музыку
+        self.play_music('game_music.wav')
+
         # Рисуем тайлы земли с учетом камеры и тряски
         for tile in self.ground_tiles:
             screen_pos = self.camera.apply(tile, self.screen_shake_offset)
@@ -1717,6 +1780,9 @@ class Game:
 
     def draw_shop(self):
         """Отрисовка магазина - современный дизайн"""
+        # Воспроизводим музыку магазина
+        self.play_music('shop_music.wav')
+
         time_offset = pygame.time.get_ticks() / 1000
 
         # Красивый градиентный фон (золотисто-коричневый)
@@ -2267,6 +2333,10 @@ class Player(pygame.sprite.Sprite):
         self.dash_timer = self.dash_duration
         self.dash_cooldown = self.dash_cooldown_max
 
+        # Звук рывка
+        if SOUNDS_ENABLED:
+            sound_dash.play()
+
         return True
 
     def update(self):
@@ -2361,6 +2431,10 @@ class Player(pygame.sprite.Sprite):
                 trash.kill()
                 self.carrying_trash = min(self.carrying_trash + 1, self.max_trash)
                 collected += 1
+
+                # Звук сбора мусора
+                if SOUNDS_ENABLED:
+                    sound_pickup.play()
 
         return {"count": collected, "damage": total_damage, "bonus_points": total_bonus_points}
 
