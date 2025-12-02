@@ -173,7 +173,7 @@ class Game:
         # Состояние ручья
         self.river_blocked = True
         self.river_trash_count = 0
-        self.river_trash_needed = 5
+        self.river_trash_needed = 1
 
         # Катсцена
         self.cutscene_active = False
@@ -354,9 +354,9 @@ class Game:
                 blockage_segment = segment
                 break
 
-        while trash_count < 15 and attempts < 150:
-            # 8 мусора размещаем у точки блокировки ручья
-            if river_trash_count < 8 and blockage_segment:
+        while trash_count < 1 and attempts < 150:
+            # 1 мусор для теста
+            if river_trash_count < 1 and blockage_segment:
                 # Размещаем мусор в районе блокировки
                 x = blockage_segment.rect.centerx + random.randint(-40, 40)
                 y = blockage_segment.rect.centery + random.randint(-60, 60)
@@ -560,7 +560,7 @@ class Game:
         # Мусор
         trash_count = 0
         attempts = 0
-        while trash_count < 20 and attempts < 150:
+        while trash_count < 1 and attempts < 150:
             x = random.randint(200, WORLD_WIDTH - 200)
             y = random.randint(200, WORLD_HEIGHT - 200)
 
@@ -613,7 +613,7 @@ class Game:
         # Мусор
         trash_count = 0
         attempts = 0
-        while trash_count < 25 and attempts < 200:
+        while trash_count < 1 and attempts < 200:
             x = random.randint(200, WORLD_WIDTH - 200)
             y = random.randint(200, WORLD_HEIGHT - 200)
 
